@@ -1,0 +1,28 @@
+{
+  "name": "graphql-meilisearch-test",
+  "version": "1.0.0",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc && node dist/server.js",
+    "start": "nodemon -w src -e ts --exec \"npm run build\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^17.0.27",
+    "nodemon": "^2.0.15",
+    "typescript": "^4.6.3"
+  },
+  "dependencies": {
+    "@graphql-ts/schema": "^0.5.2",
+    "express": "^4.18.0",
+    "express-graphql": "^0.12.0",
+    "graphql": "^15.8.0",
+    "graphql-type-json": "^0.3.2",
+    "meilisearch": "^0.25.0"
+  }
+}
