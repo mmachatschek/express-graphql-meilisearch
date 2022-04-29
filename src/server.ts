@@ -1,28 +1,18 @@
 import { graphql } from "@graphql-ts/schema"
-import type { ScalarType } from '@graphql-ts/schema'
-import { 
-    GraphQLSchema,
-} from 'graphql'
-import GraphQLJSON from 'graphql-type-json'
+import { GraphQLSchema } from 'graphql'
+import { GraphQLJSON, GraphQLDate } from 'graphql-scalars'
 import express from 'express'
 import { graphqlHTTP } from 'express-graphql'
 
-import { MeiliSearch } from 'meilisearch'
+import { MeiliSearch, Index } from 'meilisearch'
 import type { SearchResponse } from 'meilisearch'
 import movies from './movies.json'
-
-const client = new MeiliSearch({
-  host: 'http://127.0.0.1:7700',
-})
-
-const index = client.index('movies')
 
 // index.updateSettings({
 //   filterableAttributes: ['genres'],
 // })
 // index.addDocuments(movies)
 
-const JSONType: ScalarType<object> = graphql.scalar<object>(GraphQLJSON);
 
 const SearchType = graphql.object<SearchResponse>()({
     name: 'Search',
@@ -32,10 +22,10 @@ const SearchType = graphql.object<SearchResponse>()({
             type: graphql.String,
         }),
         hits: graphql.field({ 
-            type: JSONType,
+            type: graphql.scalar(GraphQLJSON),
         }),
         facetsDistribution: graphql.field({ 
-            type: JSONType,
+            type: graphql.scalar(GraphQLJSON),
         }),
         offset: graphql.field({ 
             type: graphql.Int,
@@ -58,16 +48,22 @@ const SearchType = graphql.object<SearchResponse>()({
     }
 })
 
-const RootQueryType = graphql.object()({
-    name: 'Query',
-    description: 'Root Query',
+const IndexType = graphql.object<Index>()({
+    name: 'Index',
+    description: 'An Index',
     fields: {
+        uid: graphql.field({ 
+            type: graphql.String,
+        }),
+        primaryKey: graphql.field({ 
+            type: graphql.String,
+        }),
         search: graphql.field({
             type: SearchType,
             args: {
                 q: graphql.arg({
                     type: graphql.String,
-                    description: 'Query string (mandatory)',
+                    description: 'Query string',
                     defaultValue: null,
                 }),
                 offset: graphql.arg({
@@ -121,14 +117,59 @@ const RootQueryType = graphql.object()({
                     defaultValue: null,
                 })
             },
-            resolve(_source, args) {
-                return index.search(
+            resolve(parent, args) {
+                return parent.search(
                     args.q, /** @ts-ignore */
                     args
                 )
             },
         }),
+        documents: graphql.field({
+            type: graphql.list(graphql.scalar(GraphQLJSON)),
+            resolve(parent) {
+                return parent.getDocuments()
+            }
+        })
+    }
+})
 
+const MeilisearchType = graphql.object<MeiliSearch>()({
+    name: 'Meilisearch',
+    description: 'Meilisearch query',
+    fields: {
+        index: graphql.field({
+            type: IndexType,
+            args: {
+                name: graphql.arg({
+                    type: graphql.nonNull(graphql.String),
+                    description: 'Index name (mandatory)',
+                }),
+            },
+            resolve(parent, args) {
+                return parent.getIndex(args.name)
+            },
+        }),
+        indexes: graphql.field({
+            type: graphql.list(IndexType),
+            resolve(parent) {
+                return parent.getIndexes()
+            }
+        })
+    }
+})
+
+const RootQueryType = graphql.object()({
+    name: 'Query',
+    description: 'Root Query',
+    fields: {
+        meilisearch: graphql.field({
+            type: MeilisearchType,
+            resolve() {
+                return new MeiliSearch({
+                    host: 'http://127.0.0.1:7700',
+                  })
+            }
+        })
     }
 })
 
